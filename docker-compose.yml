@@ -9,7 +9,6 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: test123
-      MONGO_INITDB_DATABASE: test_integration
 
     volumes:
       - mongo_data:/data/db
@@ -18,7 +17,7 @@ services:
     build: .
     container_name: parkingManager
     ports:
-      - 3000:3000
+      - 5001:5001
     volumes:
       - .:/user/app
 
