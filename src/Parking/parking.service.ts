@@ -1,4 +1,6 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { AppError } from '../shared/Error/AppError';
+import { AppSuccess } from '../shared/Success/AppSuccess';
 import calculateTimeDifference from '../shared/util/calculateTime';
 import { ParkingRepository } from './repository/parking.repository';
 
@@ -25,7 +27,7 @@ export class ParkingService {
 
 
 
-  async enter(plate: string): Promise<string> {
+  async enter(plate: string): Promise<void> {
 
 
     const plateRegex = /^[A-Z]{3}-\d{4}$/;
@@ -35,7 +37,7 @@ export class ParkingService {
 
     const existingParking = await this.parkingRepository.findOneByPlate(plate)
     if (existingParking) {
-      throw new ConflictException('Já existe um registro para esta placa.');
+      throw new AppError('Já existe um registro para esta placa.', 401)
     }
 
     const reservation = {
@@ -45,11 +47,9 @@ export class ParkingService {
       paid: false
     }
 
-
     await this.parkingRepository.create(reservation)
 
-
-    return reservation.reservationNumber;
+    new AppSuccess(reservation.reservationNumber, 201);
   }
 
   async exit(id: string) {
@@ -57,18 +57,18 @@ export class ParkingService {
     const parking = await this.parkingRepository.findById(id)
 
     if (!parking) {
-      throw new NotFoundException('Registro de estacionamento não encontrado.');
+      throw new AppError('Registro de estacionamento não encontrado.', 404);
     }
 
     if (!parking.paid) {
-      throw new BadRequestException('Saída não permitida sem pagamento.');
+      throw new AppError('Saída não permitida sem pagamento.', 402);
     }
 
     parking.left = true;
     parking.exitTime = new Date()
     await parking.save();
 
-    return { message: 'Saída registrada com sucesso!.' };
+    new AppSuccess('Saída registrada com sucesso!.', 200)
   }
 
 
@@ -77,17 +77,17 @@ export class ParkingService {
     const parking = await this.parkingRepository.findById(id)
 
     if (!parking) {
-      throw new NotFoundException('Registro de estacionamento não encontrado.');
+      new AppError('Registro de estacionamento não encontrado.', 404);
     }
 
     if (parking.paid) {
-      throw new BadRequestException('Este estacionamento já foi pago.');
+      new AppError('Este estacionamento já foi pago.', 401);
     }
 
     parking.paid = true;
     await parking.save();
 
-    return { message: 'Pagamento realizado com sucesso.' };
+    new AppSuccess('Pagamento realizado com sucesso.', 200)
   }
 
   async getHistory(plate: string) {
@@ -95,7 +95,7 @@ export class ParkingService {
     const history = await this.parkingRepository.findPlate(plate)
 
     if (!history.length) {
-      return { message: 'Placa não encontrada.' };
+      new AppError('Placa não encontrada.', 404)
     }
 
     const formattedHistory = history.map((entry) => ({
