@@ -1,6 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { AppError } from '../shared/Error/AppError';
-import { AppSuccess } from '../shared/Success/AppSuccess';
 import calculateTimeDifference from '../shared/util/calculateTime';
 import { ParkingRepository } from './repository/parking.repository';
 
@@ -22,12 +21,12 @@ export class ParkingService {
       return this.generateReservationNumber();
     }
 
-    return potentialReservationNumber;
+    return potentialReservationNumber
   }
 
 
 
-  async enter(plate: string): Promise<void> {
+  async enter(plate: string): Promise<string> {
 
 
     const plateRegex = /^[A-Z]{3}-\d{4}$/;
@@ -49,7 +48,7 @@ export class ParkingService {
 
     await this.parkingRepository.create(reservation)
 
-    new AppSuccess(reservation.reservationNumber, 201);
+    return reservation.reservationNumber
   }
 
   async exit(id: string) {
@@ -67,8 +66,6 @@ export class ParkingService {
     parking.left = true;
     parking.exitTime = new Date()
     await parking.save();
-
-    new AppSuccess('Saída registrada com sucesso!.', 200)
   }
 
 
@@ -77,17 +74,16 @@ export class ParkingService {
     const parking = await this.parkingRepository.findById(id)
 
     if (!parking) {
-      new AppError('Registro de estacionamento não encontrado.', 404);
+      throw new AppError('Registro de estacionamento não encontrado.', 404);
     }
 
     if (parking.paid) {
-      new AppError('Este estacionamento já foi pago.', 401);
+      throw new AppError('Este estacionamento já foi pago.', 401);
     }
 
+    console.log(parking.paid)
     parking.paid = true;
     await parking.save();
-
-    new AppSuccess('Pagamento realizado com sucesso.', 200)
   }
 
   async getHistory(plate: string) {
@@ -95,7 +91,7 @@ export class ParkingService {
     const history = await this.parkingRepository.findPlate(plate)
 
     if (!history.length) {
-      new AppError('Placa não encontrada.', 404)
+      throw new AppError('Placa não encontrada.', 404)
     }
 
     const formattedHistory = history.map((entry) => ({
